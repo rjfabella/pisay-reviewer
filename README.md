@@ -22,8 +22,51 @@ node serve.js
 
 Then open <http://localhost:8123>.
 
-**To publish it:** upload the `app/` folder to GitHub Pages, Netlify, Vercel, or any static host.
-Nothing else is required.
+## Deploying to GitHub Pages
+
+This repo ships a workflow at `.github/workflows/deploy.yml` that publishes the `app/` folder
+to GitHub Pages on every push to `main`. There is no build step — it just uploads the static files.
+
+**One-time setup:**
+
+1. Go to **Settings → Pages** in the repository.
+2. Under **Source**, choose **GitHub Actions**.
+3. Push to `main` (or run the workflow by hand from the **Actions** tab).
+
+The site then goes live at:
+
+```
+https://rjfabella.github.io/pisay-reviewer/
+```
+
+Every later push to `main` redeploys it automatically. You can watch progress in the **Actions** tab.
+
+> **Note on private repositories.** GitHub Pages only works on a private repo with a paid plan
+> (Pro, Team or Enterprise). On the free plan you have to make the repository **public** for Pages
+> to publish. See "Before making this repo public" below.
+
+**Other hosts:** the same `app/` folder drops straight into Netlify, Vercel, Cloudflare Pages, or
+any static host. Nothing else is required.
+
+## Before making this repo public
+
+The two source PDFs in the repository root are the complete scanned reviewers, and the app itself
+reproduces all 355 questions. That is fine as a personal study aid, but publishing it to a public
+repository redistributes copyrighted material to anyone who finds it.
+
+Worth deciding before you flip the repo to public. If you want the PDFs out of the repo (the app
+does not use them at all — the questions and figures are already extracted):
+
+```bash
+git rm --cached "MSA Proficiency Test 1 for Incoming High School Students.pdf" "NCE-Sample_Test_Questions-(2024).pdf"
+echo "*.pdf" >> .gitignore
+git commit -m "Remove source PDFs from the repository"
+git push
+```
+
+That keeps the files on your own machine but stops tracking them. They would still be reachable in
+the earlier commit, so to purge them from history entirely you would need `git filter-repo` or a
+fresh repo.
 
 ## What it does
 
