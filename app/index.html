@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pisay Reviewer</title>
+<meta name="description" content="Practice reviewer for incoming high school students — PSHS NCE and MSA Proficiency Test.">
+<meta name="theme-color" content="#0d1b2a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══════════ LOGIN ══════════ -->
+  <section class="screen active" id="screen-login">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="logo">🎓</div>
+        <h1>Pisay Reviewer</h1>
+        <p class="tagline">Practice for the PSHS National Competitive Exam and the MSA Proficiency Test.</p>
+        <form id="login-form" autocomplete="off">
+          <label for="name-input">What's your name?</label>
+          <input id="name-input" type="text" maxlength="24" placeholder="Type your name" required>
+          <button type="submit" class="btn btn-primary btn-block">Start reviewing</button>
+        </form>
+        <div id="known-users" class="known-users" hidden>
+          <p class="known-label">Or continue as</p>
+          <div id="known-users-list" class="known-list"></div>
+        </div>
+        <p class="login-foot"><strong>355 questions</strong> · 5 subjects · answers &amp; explanations included</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ HOME ══════════ -->
+  <section class="screen" id="screen-home">
+    <header class="topbar">
+      <div class="topbar-user">
+        <div class="avatar" id="home-avatar">A</div>
+        <div>
+          <div class="hello">Kumusta,</div>
+          <div class="uname" id="home-name">Student</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btn-theme" title="Toggle light / dark" aria-label="Toggle light or dark theme">◐</button>
+        <button class="icon-btn" id="btn-logout" title="Switch user" aria-label="Switch user">⇥</button>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <div class="container">
+
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <div class="level-title" id="level-title">Bagong Iskolar</div>
+              <div class="level-sub"><span id="level-num">Level 1</span> · <span id="xp-total">0 XP</span></div>
+            </div>
+            <div class="streak-pill" id="day-streak-pill" title="Days practiced in a row">🔥 <span id="day-streak">0</span></div>
+          </div>
+          <div class="xpbar"><div class="xpbar-fill" id="xp-fill"></div></div>
+          <div class="level-next" id="level-next">10 XP to the next level</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="stat-num" id="stat-answered">0</div><div class="stat-lbl">Answered</div></div>
+          <div class="stat"><div class="stat-num" id="stat-accuracy">—</div><div class="stat-lbl">Accuracy</div></div>
+          <div class="stat"><div class="stat-num" id="stat-quizzes">0</div><div class="stat-lbl">Quizzes</div></div>
+          <div class="stat"><div class="stat-num" id="stat-best">0</div><div class="stat-lbl">Best streak</div></div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-big" id="btn-start">▶︎ New practice session</button>
+
+        <h2 class="section-h">Subject mastery</h2>
+        <div class="mastery" id="mastery-list"></div>
+
+        <h2 class="section-h">Badges <span class="count-chip" id="badge-count">0/10</span></h2>
+        <div class="badges" id="badges-list"></div>
+
+        <h2 class="section-h">Recent sessions</h2>
+        <div class="history" id="history-list"></div>
+
+        <h2 class="section-h">Leaderboard <span class="muted-h">on this device</span></h2>
+        <div class="leaderboard" id="leaderboard"></div>
+
+        <p class="foot-note">Questions transcribed from the <em>PSHS NCE Reviewer (2024)</em> and <em>MSA Proficiency Test 1 for Incoming High School Students</em>. Answers follow the official printed keys.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SETUP ══════════ -->
+  <section class="screen" id="screen-setup">
+    <header class="topbar">
+      <button class="icon-btn" id="setup-back" aria-label="Back">←</button>
+      <div class="topbar-title">Set up your session</div>
+      <div style="width:40px"></div>
+    </header>
+
+    <div class="scroll">
+      <div class="container">
+
+        <h2 class="section-h">1 · What do you want to take?</h2>
+        <div class="opt-grid" id="mode-grid">
+          <button class="opt" data-mode="quick">
+            <span class="opt-ico">⚡</span><span class="opt-t">Quick practice</span>
+            <span class="opt-d">10 mixed questions. Great for a short review.</span>
+          </button>
+          <button class="opt" data-mode="subjects">
+            <span class="opt-ico">📚</span><span class="opt-t">Choose subjects</span>
+            <span class="opt-d">Pick exactly what you want to drill.</span>
+          </button>
+          <button class="opt" data-mode="full">
+            <span class="opt-ico">🏁</span><span class="opt-t">Full exam</span>
+            <span class="opt-d">Take a whole reviewer from start to finish.</span>
+          </button>
+        </div>
+
+        <div id="panel-subjects" hidden>
+          <h2 class="section-h">2 · Which subjects?</h2>
+          <div class="chk-list" id="subject-list"></div>
+          <div class="inline-actions">
+            <button class="btn btn-ghost btn-sm" id="subj-all">Select all</button>
+            <button class="btn btn-ghost btn-sm" id="subj-none">Clear</button>
+          </div>
+
+          <h2 class="section-h">3 · How many questions?</h2>
+          <div class="seg" id="count-seg">
+            <button class="seg-btn" data-count="10">10</button>
+            <button class="seg-btn active" data-count="20">20</button>
+            <button class="seg-btn" data-count="30">30</button>
+            <button class="seg-btn" data-count="50">50</button>
+            <button class="seg-btn" data-count="all">All</button>
+          </div>
+        </div>
+
+        <div id="panel-full" hidden>
+          <h2 class="section-h">2 · Which reviewer?</h2>
+          <div class="chk-list" id="source-list"></div>
+        </div>
+
+        <h2 class="section-h">Time limit</h2>
+        <div class="seg seg-wide" id="timer-seg">
+          <button class="seg-btn active" data-timer="0">No limit</button>
+          <button class="seg-btn" data-timer="90">Relaxed<small>90s / item</small></button>
+          <button class="seg-btn" data-timer="60">Standard<small>60s / item</small></button>
+          <button class="seg-btn" data-timer="40">Challenge<small>40s / item</small></button>
+        </div>
+
+        <h2 class="section-h">Feedback style</h2>
+        <div class="seg seg-wide" id="feedback-seg">
+          <button class="seg-btn active" data-fb="instant">Practice<small>Check each answer right away</small></button>
+          <button class="seg-btn" data-fb="end">Exam<small>See everything at the end</small></button>
+        </div>
+
+        <div class="setup-summary" id="setup-summary"></div>
+        <button class="btn btn-primary btn-block btn-big" id="btn-begin">Start</button>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ QUIZ ══════════ -->
+  <section class="screen" id="screen-quiz">
+    <header class="quizbar">
+      <button class="icon-btn" id="quiz-quit" aria-label="Quit session">✕</button>
+      <div class="quiz-progress">
+        <div class="qprog-bar"><div class="qprog-fill" id="qprog-fill"></div></div>
+        <div class="qprog-txt"><span id="q-index">1</span> / <span id="q-total">10</span></div>
+      </div>
+      <div class="quiz-right">
+        <div class="combo" id="combo" hidden>🔥<span id="combo-n">0</span></div>
+        <div class="timer" id="timer" hidden>--:--</div>
+      </div>
+    </header>
+
+    <div class="scroll" id="quiz-scroll">
+      <div class="container quiz-container">
+        <div class="q-meta">
+          <span class="tag" id="q-subject">Subject</span>
+          <span class="tag tag-soft" id="q-source">Source</span>
+        </div>
+        <div class="q-dir" id="q-dir" hidden></div>
+        <details class="passage" id="q-passage" hidden>
+          <summary><span id="passage-title">Passage</span></summary>
+          <div class="passage-body" id="passage-body"></div>
+          <div class="passage-credit" id="passage-credit"></div>
+        </details>
+        <div class="q-text" id="q-text"></div>
+        <div class="q-figure" id="q-figure" hidden><img id="q-img" alt="Figure for this question"></div>
+        <div class="choices" id="choices"></div>
+        <div class="feedback" id="feedback" hidden></div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+
+    <footer class="quizfoot">
+      <button class="btn btn-ghost" id="btn-skip">Skip</button>
+      <button class="btn btn-primary" id="btn-next" disabled>Next</button>
+    </footer>
+  </section>
+
+  <!-- ══════════ RESULTS ══════════ -->
+  <section class="screen" id="screen-results">
+    <div class="scroll">
+      <div class="container">
+        <div class="result-hero" id="result-hero">
+          <div class="result-emoji" id="result-emoji">🎉</div>
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+              <circle class="ring-fg" id="ring-fg" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="ring-label"><span id="result-pct">0</span><small>%</small></div>
+          </div>
+          <div class="result-headline" id="result-headline">Nice work!</div>
+          <div class="result-score" id="result-score">0 of 0 correct</div>
+        </div>
+
+        <div class="xp-earned" id="xp-earned"></div>
+        <div class="new-badges" id="new-badges"></div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="stat-num" id="res-streak">0</div><div class="stat-lbl">Best streak</div></div>
+          <div class="stat"><div class="stat-num" id="res-time">—</div><div class="stat-lbl">Time used</div></div>
+          <div class="stat"><div class="stat-num" id="res-avg">—</div><div class="stat-lbl">Avg / item</div></div>
+        </div>
+
+        <h2 class="section-h">How you did per subject</h2>
+        <div class="mastery" id="result-breakdown"></div>
+
+        <button class="btn btn-primary btn-block btn-big" id="btn-review">Review the answers</button>
+        <button class="btn btn-ghost btn-block" id="btn-again">Practice again</button>
+        <button class="btn btn-ghost btn-block" id="btn-home">Back to home</button>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ REVIEW ══════════ -->
+  <section class="screen" id="screen-review">
+    <header class="topbar">
+      <button class="icon-btn" id="review-back" aria-label="Back to results">←</button>
+      <div class="topbar-title">Answer review</div>
+      <button class="icon-btn" id="review-filter" title="Show only the ones I missed">⚑</button>
+    </header>
+    <div class="scroll">
+      <div class="container">
+        <div class="review-note" id="review-note"></div>
+        <div id="review-list"></div>
+        <button class="btn btn-ghost btn-block" id="btn-review-home">Back to home</button>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast-wrap" id="toast-wrap"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+</div>
+
+<script src="js/qb.js"></script>
+<script src="data/msa-math.js"></script>
+<script src="data/msa-science.js"></script>
+<script src="data/msa-vocabulary.js"></script>
+<script src="data/msa-sentence.js"></script>
+<script src="data/msa-usage.js"></script>
+<script src="data/msa-errors.js"></script>
+<script src="data/msa-reading.js"></script>
+<script src="data/msa-hekasi.js"></script>
+<script src="data/msa-abstract.js"></script>
+<script src="data/nce-quant.js"></script>
+<script src="data/nce-verbal.js"></script>
+<script src="data/nce-science.js"></script>
+<script src="data/nce-abstract.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
