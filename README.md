@@ -1,5 +1,7 @@
 # Pisay Reviewer
 
+**Live at <https://rjfabella.github.io/pisay-reviewer/>**
+
 A practice-exam web app for incoming high school students, built from two scanned reviewers:
 
 - **PSHS NCE Reviewer (2024)** — 90 questions across 4 subtests
@@ -41,21 +43,25 @@ https://rjfabella.github.io/pisay-reviewer/
 
 Every later push to `main` redeploys it automatically. You can watch progress in the **Actions** tab.
 
+> **Source must be "GitHub Actions", not "Deploy from a branch."** With the branch setting, Jekyll
+> builds the repo root and serves `README.md` as the homepage instead of the app. The workflow token
+> is also not allowed to turn Pages on by itself, so this setting has to be made once by hand.
+
 > **Note on private repositories.** GitHub Pages only works on a private repo with a paid plan
-> (Pro, Team or Enterprise). On the free plan you have to make the repository **public** for Pages
-> to publish. See "Before making this repo public" below.
+> (Pro, Team or Enterprise). On the free plan the repository has to be **public** for Pages
+> to publish.
 
 **Other hosts:** the same `app/` folder drops straight into Netlify, Vercel, Cloudflare Pages, or
 any static host. Nothing else is required.
 
-## Before making this repo public
+## The repository is public
 
-The two source PDFs in the repository root are the complete scanned reviewers, and the app itself
-reproduces all 355 questions. That is fine as a personal study aid, but publishing it to a public
-repository redistributes copyrighted material to anyone who finds it.
+Pages on a free account requires it. That means the two source PDFs in the repository root — the
+complete scanned reviewers — are publicly downloadable, and the app reproduces all 355 questions.
+Fine as a personal study aid; worth a thought as a public mirror of someone's copyrighted reviewer.
 
-Worth deciding before you flip the repo to public. If you want the PDFs out of the repo (the app
-does not use them at all — the questions and figures are already extracted):
+If you want the PDFs out of the repo (the app does not use them at all — the questions and figures
+are already extracted):
 
 ```bash
 git rm --cached "MSA Proficiency Test 1 for Incoming High School Students.pdf" "NCE-Sample_Test_Questions-(2024).pdf"
