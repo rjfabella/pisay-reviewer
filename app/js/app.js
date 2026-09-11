@@ -64,21 +64,35 @@
   function blankUser(name) {
     return {
       name: name, xp: 0, answered: 0, correct: 0, quizzes: 0, bestStreak: 0,
-      subjects: {}, badges: [], history: [], days: [], dayStreak: 0,
+      subjects: {}, badges: [], sessions: [], days: [], dayStreak: 0,
       explanationsRead: 0, seen: {}
     };
+  }
+  /* Normalise a stored profile; also used for profiles other than the signed-in one */
+  function normalizeUser(u) {
+    if (!u.subjects) u.subjects = {};
+    if (!u.badges) u.badges = [];
+    if (!u.days) u.days = [];
+    if (!u.seen) u.seen = {};
+    if (!u.sessions) {
+      /* Profiles from the first build only kept a one-line summary per session.
+         Carry those over so nothing disappears; they just have no per-answer detail. */
+      u.sessions = (u.history || []).map(function (h) {
+        return { at: null, when: h.when, title: h.title, correct: h.correct, total: h.total,
+                 pct: h.pct, xp: h.xp, elapsed: null, bestStreak: null,
+                 timer: null, feedback: null, items: [] };
+      });
+      delete u.history;
+    }
+    return u;
   }
   function getUser(name) {
     var k = name.toLowerCase();
     if (!db.users[k]) db.users[k] = blankUser(name);
-    var u = db.users[k];
-    /* forward-compatibility for profiles saved by an older build */
-    if (!u.subjects) u.subjects = {};
-    if (!u.badges) u.badges = [];
-    if (!u.history) u.history = [];
-    if (!u.days) u.days = [];
-    if (!u.seen) u.seen = {};
-    return u;
+    return normalizeUser(db.users[k]);
+  }
+  function allUsers() {
+    return Object.keys(db.users).map(function (k) { return normalizeUser(db.users[k]); });
   }
 
   /* ---------------- levels & badges ---------------- */
@@ -259,10 +273,10 @@
     /* history */
     var hw = $('history-list');
     hw.innerHTML = '';
-    if (!user.history.length) {
+    if (!user.sessions.length) {
       hw.appendChild(el('div', 'empty', 'No sessions yet. Your results will show up here.'));
     } else {
-      user.history.slice().reverse().slice(0, 6).forEach(function (h) {
+      user.sessions.slice().reverse().slice(0, 6).forEach(function (h) {
         var row = el('div', 'h-row');
         var cls = h.pct >= 80 ? '' : (h.pct >= 50 ? ' mid' : ' low');
         row.innerHTML =
@@ -702,11 +716,25 @@
       var t = user.subjects[k] || (user.subjects[k] = { a: 0, c: 0 });
       t.a += perSubject[k].a; t.c += perSubject[k].c;
     });
-    user.history.push({
-      title: S.title, correct: correct, total: S.qs.length, pct: p, xp: xp,
-      when: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    /* Full record of this session — every question, what was chosen, how long it took.
+       This is what the Records screen and the CSV exports read from. */
+    var now = new Date();
+    user.sessions.push({
+      at: now.toISOString(),
+      when: now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      title: S.title, mode: setup.mode,
+      correct: correct, total: S.qs.length, pct: p, xp: xp,
+      elapsed: elapsed, bestStreak: best,
+      timer: setup.timer || 0, feedback: S.instant ? 'practice' : 'exam',
+      items: S.qs.map(function (q, ix) {
+        return {
+          uid: q.uid,
+          chosen: S.answers[ix] == null ? null : S.answers[ix],
+          ms: S.times[ix] == null ? null : S.times[ix]
+        };
+      })
     });
-    if (user.history.length > 40) user.history = user.history.slice(-40);
+    if (user.sessions.length > 60) user.sessions = user.sessions.slice(-60);
 
     /* badges */
     var earned = [];
@@ -843,6 +871,196 @@
     }
     $('screen-review').querySelector('.scroll').scrollTop = 0;
   }
+
+  /* ============================================================
+     RECORDS & EXPORT
+     Everything saved on this device, per student, per session, per answer.
+     ============================================================ */
+  var recordsFilter = 'all';          /* 'all' or a lower-cased student key */
+  var recordsFromLogin = false;       /* where "back" should go */
+
+  function openRecords(fromLogin) {
+    recordsFromLogin = !!fromLogin;
+    /* signed in: start on that student; from the login screen: start on everyone */
+    recordsFilter = user ? user.name.toLowerCase() : 'all';
+    renderRecords();
+    show('screen-records');
+  }
+  $('btn-records').addEventListener('click', function () { openRecords(false); });
+  $('login-records').addEventListener('click', function () { openRecords(true); });
+  $('records-back').addEventListener('click', function () {
+    if (recordsFromLogin || !user) { renderKnownUsers(); show('screen-login'); }
+    else { renderHome(); show('screen-home'); }
+  });
+
+  /* [{user, session}] newest first, honouring the student filter */
+  function selectedSessions() {
+    var rows = [];
+    allUsers().forEach(function (u) {
+      if (recordsFilter !== 'all' && u.name.toLowerCase() !== recordsFilter) return;
+      u.sessions.forEach(function (s) { rows.push({ user: u, session: s }); });
+    });
+    rows.sort(function (a, b) { return (b.session.at || '') > (a.session.at || '') ? 1 : -1; });
+    return rows;
+  }
+
+  function fmtDate(s) {
+    if (!s.at) return s.when || '';
+    var d = new Date(s.at);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) +
+           ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderRecords() {
+    var users = allUsers().filter(function (u) { return u.sessions.length; });
+    if (recordsFilter !== 'all' && !users.some(function (u) { return u.name.toLowerCase() === recordsFilter; })) {
+      recordsFilter = 'all';
+    }
+
+    /* student chips */
+    var cw = $('records-students');
+    cw.innerHTML = '';
+    var allChip = el('button', 'chip' + (recordsFilter === 'all' ? ' on' : ''),
+      'Everyone <small>' + users.reduce(function (n, u) { return n + u.sessions.length; }, 0) + '</small>');
+    allChip.type = 'button';
+    allChip.addEventListener('click', function () { recordsFilter = 'all'; renderRecords(); });
+    cw.appendChild(allChip);
+    users.sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (u) {
+      var k = u.name.toLowerCase();
+      var c = el('button', 'chip' + (recordsFilter === k ? ' on' : ''),
+        esc(u.name) + ' <small>' + u.sessions.length + '</small>');
+      c.type = 'button';
+      c.addEventListener('click', function () { recordsFilter = k; renderRecords(); });
+      cw.appendChild(c);
+    });
+
+    var rows = selectedSessions();
+    $('records-count').textContent = rows.length;
+    var who = recordsFilter === 'all' ? 'all students on this device' : rows.length && rows[0].user.name;
+    $('export-hint').textContent = rows.length
+      ? 'Exports cover ' + who + ' — ' + rows.length + ' session' + (rows.length === 1 ? '' : 's') +
+        ', ' + rows.reduce(function (n, r) { return n + r.session.items.length; }, 0) + ' answers. Opens in Excel or Google Sheets.'
+      : 'Nothing to export yet.';
+    $('export-sessions').disabled = !rows.length;
+    $('export-answers').disabled = !rows.length;
+
+    var lw = $('records-list');
+    lw.innerHTML = '';
+    if (!rows.length) {
+      lw.appendChild(el('div', 'empty', 'No sessions recorded on this device yet.'));
+      return;
+    }
+    rows.forEach(function (r) { lw.appendChild(sessionCard(r.user, r.session)); });
+  }
+
+  function sessionCard(u, s) {
+    var d = el('details', 'rec');
+    var cls = s.pct >= 80 ? '' : (s.pct >= 50 ? ' mid' : ' low');
+    var sub = [fmtDate(s), s.correct + '/' + s.total + ' correct', '+' + s.xp + ' XP'];
+    if (recordsFilter === 'all') sub.unshift(u.name);
+    d.innerHTML =
+      '<summary>' +
+        '<div class="rec-pct' + cls + '">' + s.pct + '%</div>' +
+        '<div class="rec-main"><div class="rec-title">' + esc(s.title) + '</div>' +
+        '<div class="rec-sub">' + esc(sub.join(' · ')) + '</div></div>' +
+        '<div class="rec-caret">▾</div>' +
+      '</summary>';
+
+    var body = el('div', 'rec-body');
+    var meta = [];
+    if (s.feedback) meta.push(s.feedback === 'practice' ? 'Practice mode (answers shown as you go)' : 'Exam mode (answers shown at the end)');
+    if (s.timer) meta.push('Time limit ' + s.timer + 's per item');
+    if (s.elapsed != null) meta.push('Took ' + mmss(s.elapsed) + (s.total ? ' (' + Math.round(s.elapsed / s.total) + 's per item)' : ''));
+    if (s.bestStreak != null) meta.push('Best streak ' + s.bestStreak);
+    body.appendChild(el('div', 'rec-meta', esc(meta.join(' · '))));
+
+    if (!s.items.length) {
+      body.appendChild(el('div', 'rec-empty', 'This session was saved by an earlier version of the app, so only the score is available.'));
+    } else {
+      s.items.forEach(function (it, i) {
+        var q = QB.byUid(it.uid);
+        if (!q) return;
+        var right = it.chosen === q.a;
+        var row = el('div', 'ri');
+        var yours = it.chosen == null
+          ? '<span class="you-wrong">skipped</span>'
+          : '<span class="' + (right ? 'you-right' : 'you-wrong') + '">' + LETTERS[it.chosen] + '. ' + choiceBody(q, it.chosen) + '</span>';
+        row.innerHTML =
+          '<div class="ri-n">' + (i + 1) + '</div>' +
+          '<div class="ri-q"><div class="ri-sec">' + esc(q.section || q.subject) + ' · #' + q.n + '</div>' +
+            rich(q.q.length > 140 ? q.q.slice(0, 140) + '…' : q.q) +
+            '<div class="ri-ans"><b>You:</b> ' + yours + (right ? '' : ' &nbsp; <b>Answer:</b> ' + LETTERS[q.a] + '. ' + choiceBody(q, q.a)) + '</div>' +
+          '</div>' +
+          '<div class="ri-mark">' + (right ? '✅' : (it.chosen == null ? '⏭️' : '❌')) +
+            (it.ms != null ? '<small>' + Math.round(it.ms / 1000) + 's</small>' : '') + '</div>';
+        body.appendChild(row);
+      });
+    }
+    d.appendChild(body);
+    return d;
+  }
+
+  /* ---- CSV ---- */
+  function csvCell(v) {
+    if (v == null) return '';
+    var s = String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csv(rows) {
+    /* BOM so Excel reads ₱, é and friends as UTF-8 */
+    return '\uFEFF' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+  }
+  function isoDate(s) { return s.at ? s.at.slice(0, 10) : ''; }
+  function isoTime(s) { return s.at ? new Date(s.at).toTimeString().slice(0, 5) : ''; }
+  function download(name, text) {
+    var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function exportName(kind) {
+    var who = recordsFilter === 'all' ? 'all-students' : recordsFilter.replace(/[^a-z0-9]+/g, '-');
+    return 'pisay-reviewer-' + kind + '-' + who + '-' + today() + '.csv';
+  }
+
+  $('export-sessions').addEventListener('click', function () {
+    var rows = [['student', 'date', 'time', 'session', 'mode', 'questions', 'correct', 'score_pct',
+                 'xp', 'time_used_sec', 'sec_per_item', 'best_streak', 'time_limit_per_item_sec', 'feedback']];
+    selectedSessions().forEach(function (r) {
+      var s = r.session;
+      rows.push([r.user.name, isoDate(s), isoTime(s), s.title, s.mode || '', s.total, s.correct, s.pct,
+                 s.xp, s.elapsed, (s.elapsed != null && s.total) ? Math.round(s.elapsed / s.total) : '',
+                 s.bestStreak, s.timer || 0, s.feedback || '']);
+    });
+    download(exportName('sessions'), csv(rows));
+    toast('Sessions CSV downloaded');
+  });
+
+  $('export-answers').addEventListener('click', function () {
+    var rows = [['student', 'date', 'time', 'session', 'q_no', 'source', 'subject', 'section', 'item_no',
+                 'question', 'your_answer', 'your_answer_text', 'correct_answer', 'correct_answer_text',
+                 'result', 'seconds']];
+    selectedSessions().forEach(function (r) {
+      var s = r.session;
+      s.items.forEach(function (it, i) {
+        var q = QB.byUid(it.uid);
+        if (!q) return;
+        var right = it.chosen === q.a;
+        rows.push([r.user.name, isoDate(s), isoTime(s), s.title, i + 1, q.source, q.subject, q.section || '',
+                   q.n, q.q.replace(/\*/g, ''),
+                   it.chosen == null ? '' : LETTERS[it.chosen],
+                   it.chosen == null ? '' : q.c[it.chosen],
+                   LETTERS[q.a], q.c[q.a],
+                   it.chosen == null ? 'skipped' : (right ? 'correct' : 'wrong'),
+                   it.ms != null ? Math.round(it.ms / 1000) : '']);
+      });
+    });
+    download(exportName('answers'), csv(rows));
+    toast('Answers CSV downloaded');
+  });
 
   /* ============================================================
      CONFETTI

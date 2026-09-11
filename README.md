@@ -86,11 +86,34 @@ fresh repo.
 | Automatic scoring | Percentage, per-subject breakdown, best streak, time used, average per item. |
 | Answer review | Every question with the correct answer and an explanation; filter to just the ones you missed. |
 | Gamification | XP, 10 levels with Filipino titles, streak combos, 10 badges, day streak, per-subject mastery bars, on-device leaderboard. |
+| Records & export | Every session with every answer given, per student; two CSV exports. See below. |
 | Light / dark | Follows the system setting, with a manual toggle. |
 | Keyboard | `A`–`E` or `1`–`5` to answer, `Enter` for next. |
 
 Progress is stored in the browser's `localStorage`, so it stays on that device and is never
 uploaded anywhere.
+
+## Checking a student's records
+
+Every finished session is saved in full — not just the score, but each question, the answer the
+student picked, the correct answer, and how long each one took.
+
+**Records screen.** Open it from the **📋 Records & export** button on the home screen, or from
+**View records on this device** at the bottom of the sign-in screen (no need to pick a student
+first). Filter by student, tap a session to expand the per-question breakdown.
+
+**CSV export.** Two buttons on the Records screen, honouring the current student filter:
+
+| File | One row per… | Columns |
+| --- | --- | --- |
+| `…-sessions-….csv` | session | student, date, time, session, mode, questions, correct, score %, XP, time used, seconds per item, best streak, time limit, feedback style |
+| `…-answers-….csv` | answer | student, date, time, session, question number, source, subject, section, item number in the reviewer, question text, your answer (letter + text), correct answer (letter + text), result (`correct` / `wrong` / `skipped`), seconds |
+
+Both open straight in Excel or Google Sheets (UTF-8 with BOM, so `₱` and accents survive).
+
+**The one limitation.** There is no server, so records live in the browser on whichever device
+the student used. The Records screen shows everything on *that* device. To check from a different
+device, the student exports a CSV there and sends it over. The last 60 sessions per student are kept.
 
 ## Explanations
 

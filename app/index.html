@@ -31,6 +31,7 @@
           <div id="known-users-list" class="known-list"></div>
         </div>
         <p class="login-foot"><strong>355 questions</strong> · 5 subjects · answers &amp; explanations included</p>
+        <button type="button" class="link-btn" id="login-records">📋 View records on this device</button>
       </div>
     </div>
   </section>
@@ -74,6 +75,7 @@
         </div>
 
         <button class="btn btn-primary btn-block btn-big" id="btn-start">▶︎ New practice session</button>
+        <button class="btn btn-ghost btn-block" id="btn-records">📋 Records &amp; export</button>
 
         <h2 class="section-h">Subject mastery</h2>
         <div class="mastery" id="mastery-list"></div>
@@ -252,6 +254,37 @@
         <div class="review-note" id="review-note"></div>
         <div id="review-list"></div>
         <button class="btn btn-ghost btn-block" id="btn-review-home">Back to home</button>
+        <div class="spacer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ RECORDS ══════════ -->
+  <section class="screen" id="screen-records">
+    <header class="topbar">
+      <button class="icon-btn" id="records-back" aria-label="Back">←</button>
+      <div class="topbar-title">Records</div>
+      <div style="width:40px"></div>
+    </header>
+    <div class="scroll">
+      <div class="container">
+        <div class="review-note">
+          Every session saved <b>on this device</b>, with each answer given. Records from another
+          phone or computer won't appear here — have the student export a CSV from that device instead.
+        </div>
+
+        <h2 class="section-h">Student</h2>
+        <div class="chip-row" id="records-students"></div>
+
+        <h2 class="section-h">Export</h2>
+        <div class="export-row">
+          <button class="btn btn-ghost" id="export-sessions">⬇ Sessions (CSV)</button>
+          <button class="btn btn-ghost" id="export-answers">⬇ Every answer (CSV)</button>
+        </div>
+        <div class="export-hint" id="export-hint"></div>
+
+        <h2 class="section-h">Sessions <span class="count-chip" id="records-count">0</span></h2>
+        <div id="records-list"></div>
         <div class="spacer"></div>
       </div>
     </div>

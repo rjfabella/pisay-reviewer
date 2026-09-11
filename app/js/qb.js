@@ -5,10 +5,12 @@
   'use strict';
 
   var sets = [];
+  var index = null;                 /* uid -> question, built lazily on first lookup */
 
   var QB = {
     /* Called by every file in data/ */
     add: function (set) {
+      index = null;                 /* a new set invalidates the lookup table */
       set.questions.forEach(function (q) {
         q.uid = set.id + '-' + q.n;
         q.setId = set.id;
@@ -28,9 +30,11 @@
     },
 
     byUid: function (uid) {
-      var all = QB.all();
-      for (var i = 0; i < all.length; i++) if (all[i].uid === uid) return all[i];
-      return null;
+      if (!index) {
+        index = {};
+        QB.all().forEach(function (q) { index[q.uid] = q; });
+      }
+      return index[uid] || null;
     },
 
     /* [{name, count, sets:[...]}] ordered for display */
